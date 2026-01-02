@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NecordModule } from 'necord';
 import { IntentsBitField } from 'discord.js';
+import { PingCommand } from './commands/ping.command.js';
 
 @Module({
   imports: [
@@ -21,5 +22,6 @@ import { IntentsBitField } from 'discord.js';
       }),
     }),
   ],
+  providers: [PingCommand],
 })
 export class AppModule {}
