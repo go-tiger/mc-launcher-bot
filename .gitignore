@@ -4,7 +4,7 @@
 /build
 
 # Database
-/data
+*.db
 
 # Logs
 logs

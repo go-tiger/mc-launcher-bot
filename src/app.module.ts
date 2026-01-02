@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NecordModule } from 'necord';
 import { IntentsBitField } from 'discord.js';
 import { PingCommand } from './commands/ping.command.js';
+import { TicketModule } from './ticket/ticket.module.js';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { PingCommand } from './commands/ping.command.js';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'better-sqlite3',
-        database: configService.get<string>('DATABASE_PATH') || './data/bot.db',
+        database: configService.get<string>('DATABASE_PATH') || './bot.db',
         autoLoadEntities: true,
         synchronize: true,
       }),
