@@ -7,6 +7,8 @@ export interface UserSelection {
   mcVersion?: string;
   modLoader?: string;
   loaderVersion?: string;
+  interactionToken?: string;
+  applicationId?: string;
 }
 
 @Injectable()
@@ -90,5 +92,16 @@ export class TicketService {
     if (!commission) return null;
     commission.status = status;
     return this.commissionRepository.save(commission);
+  }
+
+  async updateCommissionPrice(id: number, price: number): Promise<Commission | null> {
+    const commission = await this.commissionRepository.findOne({ where: { id } });
+    if (!commission) return null;
+    commission.price = price;
+    return this.commissionRepository.save(commission);
+  }
+
+  async getCommissionById(id: number): Promise<Commission | null> {
+    return this.commissionRepository.findOne({ where: { id } });
   }
 }

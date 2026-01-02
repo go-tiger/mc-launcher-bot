@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Context, Modal } from 'necord';
 import type { ModalContext } from 'necord';
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
   EmbedBuilder,
   MessageFlags,
@@ -36,6 +39,8 @@ export class TicketModalHandler {
     const mcVersion = userData.mcVersion;
     const modLoader = userData.modLoader as ModLoader;
     const loaderVersion = userData.loaderVersion;
+    const interactionToken = userData.interactionToken;
+    const applicationId = userData.applicationId;
 
     const launcherName = interaction.fields.getTextInputValue('launcher_name');
     const folderName = interaction.fields.getTextInputValue('folder_name');
@@ -43,6 +48,13 @@ export class TicketModalHandler {
 
     // Clear user selection
     this.ticketService.clearUserSelection(interaction.user.id);
+
+    // Delete the selection message
+    if (interactionToken && applicationId) {
+      interaction.client.rest
+        .delete(`/webhooks/${applicationId}/${interactionToken}/messages/@original`)
+        .catch(() => {});
+    }
 
     // Get guild config
     const config = await this.ticketService.getOrCreateGuildConfig(interaction.guild.id);
@@ -123,15 +135,40 @@ export class TicketModalHandler {
       embed.addFields({ name: '추가 요청사항', value: additionalNotes });
     }
 
+    // Admin action buttons
+    const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('commission_status')
+        .setLabel('상태 변경')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📋'),
+      new ButtonBuilder()
+        .setCustomId('commission_price')
+        .setLabel('가격 설정')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('💰'),
+      new ButtonBuilder()
+        .setCustomId('commission_close')
+        .setLabel('티켓 닫기')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🔒'),
+    );
+
     // Send welcome message in ticket channel
     await ticketChannel.send({
       content: `<@${interaction.user.id}> <@&${config.adminRoleId}>`,
       embeds: [embed],
+      components: [actionRow],
     });
 
-    return interaction.reply({
+    // Reply and delete after 3 seconds
+    await interaction.reply({
       content: `✅ 티켓이 생성되었습니다! <#${ticketChannel.id}>`,
       flags: MessageFlags.Ephemeral,
     });
+
+    setTimeout(() => {
+      interaction.deleteReply().catch(() => {});
+    }, 3000);
   }
 }

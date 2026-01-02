@@ -71,6 +71,12 @@ export class TicketButtonHandler {
       ],
       flags: MessageFlags.Ephemeral,
     });
+
+    // Store interaction info for later message deletion
+    this.ticketService.updateUserSelection(interaction.user.id, {
+      interactionToken: interaction.token,
+      applicationId: interaction.client.application?.id,
+    });
   }
 
   @StringSelect('select_mc_version')
