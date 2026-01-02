@@ -1,0 +1,11 @@
+services:
+  bot:
+    image: ghcr.io/go-tiger/mc-launcher-bot:latest
+    container_name: mc-launcher-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./bot.db:/app/bot.db
+    environment:
+      - NODE_ENV=production
