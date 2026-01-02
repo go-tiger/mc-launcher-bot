@@ -31,8 +31,10 @@ import { TicketModule } from './ticket/ticket.module.js';
           IntentsBitField.Flags.GuildMessages,
           IntentsBitField.Flags.GuildMembers,
         ],
+        development: ['1448950434113916930'],
       }),
     }),
+    TicketModule,
   ],
   providers: [PingCommand],
 })
