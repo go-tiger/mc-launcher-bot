@@ -12,7 +12,7 @@ import { IntentsBitField } from 'discord.js';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        token: configService.get<string>('DISCORD_TOKEN'),
+        token: configService.getOrThrow<string>('DISCORD_TOKEN'),
         intents: [
           IntentsBitField.Flags.Guilds,
           IntentsBitField.Flags.GuildMessages,
