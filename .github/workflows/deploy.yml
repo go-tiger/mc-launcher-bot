@@ -59,8 +59,8 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
-          source: "docker-compose.yml"
-          target: "~/mc-launcher-bot"
+          source: 'docker-compose.yml'
+          target: '~/gt-studio-bot'
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
@@ -70,8 +70,8 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            mkdir -p ~/mc-launcher-bot
-            cd ~/mc-launcher-bot
+            mkdir -p ~/gt-studio-bot
+            cd ~/gt-studio-bot
             touch bot.db
             echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
             echo "DATABASE_PATH=${{ secrets.DATABASE_PATH }}" >> .env

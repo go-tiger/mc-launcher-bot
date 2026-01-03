@@ -1,7 +1,7 @@
 services:
   bot:
-    image: ghcr.io/go-tiger/mc-launcher-bot:latest
-    container_name: mc-launcher-bot
+    image: ghcr.io/go-tiger/gt-studio-bot:latest
+    container_name: gt-studio-bot
     restart: unless-stopped
     env_file:
       - .env
