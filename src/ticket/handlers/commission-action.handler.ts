@@ -13,7 +13,7 @@ import {
   TextInputStyle,
 } from 'discord.js';
 import { TicketService } from '../ticket.service.js';
-import { CommissionStatus } from '../../entities/index.js';
+import { CommissionStatus } from '../../core/entities/index.js';
 
 @Injectable()
 export class CommissionActionHandler {

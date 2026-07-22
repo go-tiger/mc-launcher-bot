@@ -11,7 +11,7 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import { TicketService } from '../ticket.service.js';
-import { ModLoader, CommissionStatus } from '../../entities/index.js';
+import { ModLoader, CommissionStatus } from '../../core/entities/index.js';
 
 @Injectable()
 export class TicketModalHandler {

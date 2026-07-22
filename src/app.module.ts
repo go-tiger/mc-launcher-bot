@@ -1,9 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NecordModule } from 'necord';
-import { IntentsBitField } from 'discord.js';
-import { PingCommand } from './commands/ping.command.js';
+import { DiscordModule } from './discord/discord.module.js';
 import { TicketModule } from './ticket/ticket.module.js';
 
 @Module({
@@ -21,21 +19,8 @@ import { TicketModule } from './ticket/ticket.module.js';
         synchronize: true,
       }),
     }),
-    NecordModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        token: configService.getOrThrow<string>('DISCORD_TOKEN'),
-        intents: [
-          IntentsBitField.Flags.Guilds,
-          IntentsBitField.Flags.GuildMessages,
-          IntentsBitField.Flags.GuildMembers,
-        ],
-        development: ['1448950434113916930'],
-      }),
-    }),
+    DiscordModule,
     TicketModule,
   ],
-  providers: [PingCommand],
 })
 export class AppModule {}

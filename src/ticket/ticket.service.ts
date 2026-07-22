@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Commission, GuildConfig, ModLoader, CommissionStatus } from '../entities/index.js';
+import { Commission, GuildConfig, ModLoader, CommissionStatus } from '../core/entities/index.js';
 
 export interface UserSelection {
   mcVersion?: string;
