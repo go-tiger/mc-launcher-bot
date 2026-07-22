@@ -29,57 +29,59 @@ export class Commission {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'guildId' })
   guildId: string;
 
   @ManyToOne(() => GuildConfig, (guildConfig) => guildConfig.commissions)
   @JoinColumn({ name: 'guildId', referencedColumnName: 'guildId' })
   guildConfig: GuildConfig;
 
-  @Column()
+  @Column({ name: 'requesterId' })
   requesterId: string;
 
-  @Column()
+  @Column({ name: 'requesterTag' })
   requesterTag: string;
 
-  @Column()
+  @Column({ name: 'ticketChannelId' })
   ticketChannelId: string;
 
-  @Column()
+  @Column({ name: 'launcherName' })
   launcherName: string;
 
-  @Column()
+  @Column({ name: 'folderName' })
   folderName: string;
 
-  @Column()
+  @Column({ name: 'minecraftVersion' })
   minecraftVersion: string;
 
   @Column({
+    name: 'modLoader',
     type: 'text',
   })
   modLoader: ModLoader;
 
-  @Column()
+  @Column({ name: 'loaderVersion' })
   loaderVersion: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'additionalNotes', type: 'text', nullable: true })
   additionalNotes: string;
 
   @Column({
+    name: 'status',
     type: 'text',
     default: CommissionStatus.PENDING,
   })
   status: CommissionStatus;
 
-  @Column({ nullable: true })
+  @Column({ name: 'assignedAdminId', nullable: true })
   assignedAdminId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'price', nullable: true })
   price: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
 }

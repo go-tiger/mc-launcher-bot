@@ -10,33 +10,33 @@ import { Commission } from './commission.entity.js';
 
 @Entity('bot_guild_configs')
 export class GuildConfig {
-  @PrimaryColumn()
+  @PrimaryColumn({ name: 'guildId' })
   guildId: string;
 
   @OneToMany(() => Commission, (commission) => commission.guildConfig)
   commissions: Commission[];
 
-  @Column({ nullable: true })
+  @Column({ name: 'adminRoleId', nullable: true })
   adminRoleId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'ticketCategoryId', nullable: true })
   ticketCategoryId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'archiveCategoryId', nullable: true })
   archiveCategoryId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'ticketChannelId', nullable: true })
   ticketChannelId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'ticketMessageId', nullable: true })
   ticketMessageId: string;
 
-  @Column({ default: 0 })
+  @Column({ name: 'ticketCounter', default: 0 })
   ticketCounter: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
 }

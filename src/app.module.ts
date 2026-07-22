@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { DiscordModule } from './discord/discord.module.js';
 import { TicketModule } from './ticket/ticket.module.js';
 
@@ -19,7 +20,8 @@ import { TicketModule } from './ticket/ticket.module.js';
         username: configService.get<string>('DATABASE_USERNAME') || 'postgres',
         password: configService.get<string>('DATABASE_PASSWORD') || '',
         database: configService.get<string>('DATABASE_DATABASE') || 'gt_studio_bot',
-        autoLoadEntities: true,
+        namingStrategy: new SnakeNamingStrategy(),
+        entities: [__dirname + '/core/entities/**/*{.ts,.js}'],
         synchronize: true,
       }),
     }),
