@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { GuildConfig } from './guild-config.entity.js';
 
 export enum CommissionStatus {
   PENDING = '대기',
@@ -21,13 +24,17 @@ export enum ModLoader {
   NEOFORGE = 'NeoForge',
 }
 
-@Entity('commissions')
+@Entity('bot_commissions')
 export class Commission {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
   guildId: string;
+
+  @ManyToOne(() => GuildConfig, (guildConfig) => guildConfig.commissions)
+  @JoinColumn({ name: 'guildId', referencedColumnName: 'guildId' })
+  guildConfig: GuildConfig;
 
   @Column()
   requesterId: string;
