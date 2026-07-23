@@ -278,6 +278,14 @@ export class TicketButtonHandler {
       .setRequired(false)
       .setMaxLength(1000);
 
+    const deadlineInput = new TextInputBuilder()
+      .setCustomId('deadline')
+      .setLabel('희망 기한')
+      .setPlaceholder('예: 2026-08-15 (YYYY-MM-DD 형식으로 입력)')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true)
+      .setMaxLength(10);
+
     const launcherTypeSelect = new StringSelectMenuBuilder()
       .setCustomId('launcher_type')
       .addOptions(
@@ -293,6 +301,7 @@ export class TicketButtonHandler {
       new ActionRowBuilder<TextInputBuilder>().addComponents(launcherNameInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(folderNameInput),
       launcherTypeLabel,
+      new ActionRowBuilder<TextInputBuilder>().addComponents(deadlineInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(additionalNotesInput),
     );
 

@@ -13,7 +13,7 @@ import {
 import { TicketService } from '../ticket.service.js';
 import { TicketLauncherModLoader, TicketStatus } from '../../core/entities/index.js';
 
-const LAUNCHER_TICKET_DEADLINE_DAYS = 14;
+const DEADLINE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 @Injectable()
 export class TicketModalHandler {
@@ -48,6 +48,25 @@ export class TicketModalHandler {
     const folderName = interaction.fields.getTextInputValue('folder_name');
     const additionalNotes = interaction.fields.getTextInputValue('additional_notes');
     const launcherType = interaction.fields.getStringSelectValues('launcher_type')[0];
+    const deadlineInput = interaction.fields.getTextInputValue('deadline').trim();
+
+    if (!DEADLINE_DATE_PATTERN.test(deadlineInput)) {
+      return interaction.reply({
+        content: '기한 형식이 올바르지 않습니다. YYYY-MM-DD 형식으로 입력해주세요. (예: 2026-08-15)',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const deadline = new Date(`${deadlineInput}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (Number.isNaN(deadline.getTime()) || deadline < today) {
+      return interaction.reply({
+        content: '기한이 올바르지 않습니다. 오늘 이후의 날짜를 YYYY-MM-DD 형식으로 입력해주세요.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
     // Clear user selection
     this.ticketService.clearUserSelection(interaction.user.id);
@@ -70,9 +89,6 @@ export class TicketModalHandler {
     }
 
     // Create ticket + launcher spec in the database first (id needed for channel naming)
-    const deadline = new Date();
-    deadline.setDate(deadline.getDate() + LAUNCHER_TICKET_DEADLINE_DAYS);
-
     const ticket = await this.ticketService.createLauncherTicket({
       guild: interaction.guild.id,
       requester: interaction.user.id,
@@ -134,6 +150,7 @@ export class TicketModalHandler {
         { name: '마인크래프트 버전', value: mcVersion, inline: true },
         { name: '모드로더', value: `${modLoader} ${loaderVersion}`, inline: true },
         { name: '런처 타입', value: `${launcherType} 타입`, inline: true },
+        { name: '희망 기한', value: `<t:${Math.floor(deadline.getTime() / 1000)}:D>`, inline: true },
       )
       .setTimestamp();
 
