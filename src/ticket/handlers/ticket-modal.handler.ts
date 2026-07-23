@@ -31,7 +31,7 @@ export class TicketModalHandler {
     // Get stored selection from service
     const userData = this.ticketService.getUserSelection(interaction.user.id);
 
-    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion || !userData?.launcherType) {
+    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion) {
       return interaction.reply({
         content: '오류가 발생했습니다. 다시 시도해주세요.',
         flags: MessageFlags.Ephemeral,
@@ -41,13 +41,13 @@ export class TicketModalHandler {
     const mcVersion = userData.mcVersion;
     const modLoader = userData.modLoader as TicketLauncherModLoader;
     const loaderVersion = userData.loaderVersion;
-    const launcherType = userData.launcherType;
     const interactionToken = userData.interactionToken;
     const applicationId = userData.applicationId;
 
     const launcherName = interaction.fields.getTextInputValue('launcher_name');
     const folderName = interaction.fields.getTextInputValue('folder_name');
     const additionalNotes = interaction.fields.getTextInputValue('additional_notes');
+    const launcherType = interaction.fields.getStringSelectValues('launcher_type')[0];
 
     // Clear user selection
     this.ticketService.clearUserSelection(interaction.user.id);

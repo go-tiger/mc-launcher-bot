@@ -6,6 +6,7 @@ import {
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
+  LabelBuilder,
   MessageFlags,
   ModalBuilder,
   TextInputBuilder,
@@ -69,17 +70,6 @@ export class TicketButtonHandler {
         { label: 'NeoForge', value: 'NeoForge' },
       ]);
 
-    // Launcher Type Buttons
-    const typeAButton = new ButtonBuilder()
-      .setCustomId('launcher_type_a')
-      .setLabel('A 타입')
-      .setStyle(ButtonStyle.Secondary);
-
-    const typeBButton = new ButtonBuilder()
-      .setCustomId('launcher_type_b')
-      .setLabel('B 타입')
-      .setStyle(ButtonStyle.Secondary);
-
     // Next Button (disabled until all selections made)
     const nextButton = new ButtonBuilder()
       .setCustomId('ticket_next')
@@ -92,7 +82,6 @@ export class TicketButtonHandler {
       components: [
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(mcVersionSelect),
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(modLoaderSelect),
-        new ActionRowBuilder<ButtonBuilder>().addComponents(typeAButton, typeBButton),
         new ActionRowBuilder<ButtonBuilder>().addComponents(nextButton),
       ],
       flags: MessageFlags.Ephemeral,
@@ -140,27 +129,8 @@ export class TicketButtonHandler {
     await this.updateSelectionMessage(interaction, userData);
   }
 
-  @Button('launcher_type_a')
-  async onSelectLauncherTypeA(@Context() [interaction]: ButtonContext) {
-    await interaction.deferUpdate();
-    const userData = this.ticketService.updateUserSelection(interaction.user.id, {
-      launcherType: 'A',
-    });
-    await this.updateSelectionMessage(interaction, userData);
-  }
-
-  @Button('launcher_type_b')
-  async onSelectLauncherTypeB(@Context() [interaction]: ButtonContext) {
-    await interaction.deferUpdate();
-    const userData = this.ticketService.updateUserSelection(interaction.user.id, {
-      launcherType: 'B',
-    });
-    await this.updateSelectionMessage(interaction, userData);
-  }
-
   private async updateSelectionMessage(interaction: any, userData: UserSelection) {
-    const allSelected =
-      userData.mcVersion && userData.modLoader && userData.loaderVersion && userData.launcherType;
+    const allSelected = userData.mcVersion && userData.modLoader && userData.loaderVersion;
 
     // Rebuild MC version select
     const versions = await this.getCachedMinecraftVersions();
@@ -214,19 +184,6 @@ export class TicketButtonHandler {
       }
     }
 
-    // Rebuild launcher type buttons
-    const typeAButton = new ButtonBuilder()
-      .setCustomId('launcher_type_a')
-      .setLabel('A 타입')
-      .setStyle(userData.launcherType === 'A' ? ButtonStyle.Success : ButtonStyle.Secondary);
-
-    const typeBButton = new ButtonBuilder()
-      .setCustomId('launcher_type_b')
-      .setLabel('B 타입')
-      .setStyle(userData.launcherType === 'B' ? ButtonStyle.Success : ButtonStyle.Secondary);
-
-    components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(typeAButton, typeBButton));
-
     // Add next button
     const nextButton = new ButtonBuilder()
       .setCustomId('ticket_next')
@@ -239,8 +196,7 @@ export class TicketButtonHandler {
     const statusText = `**의뢰 정보를 선택해주세요**\n\n` +
       `1️⃣ 마인크래프트 버전: ${userData.mcVersion || '선택 안됨'}\n` +
       `2️⃣ 모드로더: ${userData.modLoader || '선택 안됨'}\n` +
-      `3️⃣ 로더 버전: ${userData.loaderVersion || '선택 안됨'}\n` +
-      `4️⃣ 런처 타입: ${userData.launcherType ? `${userData.launcherType} 타입` : '선택 안됨'}`;
+      `3️⃣ 로더 버전: ${userData.loaderVersion || '선택 안됨'}`;
 
     await interaction.editReply({
       content: statusText,
@@ -287,7 +243,7 @@ export class TicketButtonHandler {
   async onTicketNext(@Context() [interaction]: ButtonContext) {
     const userData = this.ticketService.getUserSelection(interaction.user.id);
 
-    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion || !userData?.launcherType) {
+    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion) {
       return interaction.reply({
         content: '모든 항목을 선택해주세요.',
         flags: MessageFlags.Ephemeral,
@@ -322,9 +278,21 @@ export class TicketButtonHandler {
       .setRequired(false)
       .setMaxLength(1000);
 
+    const launcherTypeSelect = new StringSelectMenuBuilder()
+      .setCustomId('launcher_type')
+      .addOptions(
+        { label: 'A 타입', value: 'A' },
+        { label: 'B 타입', value: 'B' },
+      );
+
+    const launcherTypeLabel = new LabelBuilder()
+      .setLabel('런처 타입')
+      .setStringSelectMenuComponent(launcherTypeSelect);
+
     modal.addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(launcherNameInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(folderNameInput),
+      launcherTypeLabel,
       new ActionRowBuilder<TextInputBuilder>().addComponents(additionalNotesInput),
     );
 

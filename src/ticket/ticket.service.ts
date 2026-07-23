@@ -14,7 +14,6 @@ export interface UserSelection {
   mcVersion?: string;
   modLoader?: string;
   loaderVersion?: string;
-  launcherType?: string;
   interactionToken?: string;
   applicationId?: string;
 }
