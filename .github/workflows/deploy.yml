@@ -72,9 +72,12 @@ jobs:
           script: |
             mkdir -p ~/gt-studio-bot
             cd ~/gt-studio-bot
-            touch bot.db
             echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
-            echo "DATABASE_PATH=${{ secrets.DATABASE_PATH }}" >> .env
+            echo "DATABASE_HOST=${{ secrets.DATABASE_HOST }}" >> .env
+            echo "DATABASE_PORT=${{ secrets.DATABASE_PORT }}" >> .env
+            echo "DATABASE_USERNAME=${{ secrets.DATABASE_USERNAME }}" >> .env
+            echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
+            echo "DATABASE_DATABASE=${{ secrets.DATABASE_DATABASE }}" >> .env
             docker compose pull
             docker compose up -d --force-recreate
             docker image prune -f

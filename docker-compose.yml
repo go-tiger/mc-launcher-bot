@@ -5,7 +5,5 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    volumes:
-      - ./bot.db:/app/bot.db
     environment:
       - NODE_ENV=production
