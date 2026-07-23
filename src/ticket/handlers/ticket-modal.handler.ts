@@ -31,7 +31,7 @@ export class TicketModalHandler {
     // Get stored selection from service
     const userData = this.ticketService.getUserSelection(interaction.user.id);
 
-    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion) {
+    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion || !userData?.launcherType) {
       return interaction.reply({
         content: '오류가 발생했습니다. 다시 시도해주세요.',
         flags: MessageFlags.Ephemeral,
@@ -41,6 +41,7 @@ export class TicketModalHandler {
     const mcVersion = userData.mcVersion;
     const modLoader = userData.modLoader as TicketLauncherModLoader;
     const loaderVersion = userData.loaderVersion;
+    const launcherType = userData.launcherType;
     const interactionToken = userData.interactionToken;
     const applicationId = userData.applicationId;
 
@@ -132,6 +133,7 @@ export class TicketModalHandler {
         { name: '폴더명', value: folderName, inline: true },
         { name: '마인크래프트 버전', value: mcVersion, inline: true },
         { name: '모드로더', value: `${modLoader} ${loaderVersion}`, inline: true },
+        { name: '런처 타입', value: `${launcherType} 타입`, inline: true },
       )
       .setTimestamp();
 

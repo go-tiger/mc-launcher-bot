@@ -19,14 +19,28 @@ import {
 } from '@gotiger/minecraft-modloader-api';
 import { TicketService, UserSelection } from '../ticket.service.js';
 
+const VERSION_CACHE_TTL_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class TicketButtonHandler {
+  private mcVersionsCache?: { data: Awaited<ReturnType<typeof getMinecraftVersions>>; expiresAt: number };
+  private loaderVersionsCache = new Map<string, { data: string[]; expiresAt: number }>();
+
   constructor(private readonly ticketService: TicketService) {}
+
+  private async getCachedMinecraftVersions() {
+    if (this.mcVersionsCache && this.mcVersionsCache.expiresAt > Date.now()) {
+      return this.mcVersionsCache.data;
+    }
+    const data = await getMinecraftVersions();
+    this.mcVersionsCache = { data, expiresAt: Date.now() + VERSION_CACHE_TTL_MS };
+    return data;
+  }
 
   @Button('create_ticket')
   async onCreateTicket(@Context() [interaction]: ButtonContext) {
     // Fetch Minecraft versions from API
-    const versions = await getMinecraftVersions();
+    const versions = await this.getCachedMinecraftVersions();
     const releaseVersions = versions
       .filter(v => v.type === 'release')
       .slice(0, 25) // Discord limit
@@ -55,6 +69,17 @@ export class TicketButtonHandler {
         { label: 'NeoForge', value: 'NeoForge' },
       ]);
 
+    // Launcher Type Buttons
+    const typeAButton = new ButtonBuilder()
+      .setCustomId('launcher_type_a')
+      .setLabel('A 타입')
+      .setStyle(ButtonStyle.Secondary);
+
+    const typeBButton = new ButtonBuilder()
+      .setCustomId('launcher_type_b')
+      .setLabel('B 타입')
+      .setStyle(ButtonStyle.Secondary);
+
     // Next Button (disabled until all selections made)
     const nextButton = new ButtonBuilder()
       .setCustomId('ticket_next')
@@ -67,6 +92,7 @@ export class TicketButtonHandler {
       components: [
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(mcVersionSelect),
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(modLoaderSelect),
+        new ActionRowBuilder<ButtonBuilder>().addComponents(typeAButton, typeBButton),
         new ActionRowBuilder<ButtonBuilder>().addComponents(nextButton),
       ],
       flags: MessageFlags.Ephemeral,
@@ -81,6 +107,7 @@ export class TicketButtonHandler {
 
   @StringSelect('select_mc_version')
   async onSelectMcVersion(@Context() [interaction]: StringSelectContext) {
+    await interaction.deferUpdate();
     const selected = interaction.values[0];
     // Reset mod loader and loader version when MC version changes
     const userData = this.ticketService.updateUserSelection(interaction.user.id, {
@@ -93,6 +120,7 @@ export class TicketButtonHandler {
 
   @StringSelect('select_mod_loader')
   async onSelectModLoader(@Context() [interaction]: StringSelectContext) {
+    await interaction.deferUpdate();
     const selected = interaction.values[0];
     // Reset loader version when mod loader changes
     const userData = this.ticketService.updateUserSelection(interaction.user.id, {
@@ -104,6 +132,7 @@ export class TicketButtonHandler {
 
   @StringSelect('select_loader_version')
   async onSelectLoaderVersion(@Context() [interaction]: StringSelectContext) {
+    await interaction.deferUpdate();
     const selected = interaction.values[0];
     const userData = this.ticketService.updateUserSelection(interaction.user.id, {
       loaderVersion: selected,
@@ -111,11 +140,30 @@ export class TicketButtonHandler {
     await this.updateSelectionMessage(interaction, userData);
   }
 
+  @Button('launcher_type_a')
+  async onSelectLauncherTypeA(@Context() [interaction]: ButtonContext) {
+    await interaction.deferUpdate();
+    const userData = this.ticketService.updateUserSelection(interaction.user.id, {
+      launcherType: 'A',
+    });
+    await this.updateSelectionMessage(interaction, userData);
+  }
+
+  @Button('launcher_type_b')
+  async onSelectLauncherTypeB(@Context() [interaction]: ButtonContext) {
+    await interaction.deferUpdate();
+    const userData = this.ticketService.updateUserSelection(interaction.user.id, {
+      launcherType: 'B',
+    });
+    await this.updateSelectionMessage(interaction, userData);
+  }
+
   private async updateSelectionMessage(interaction: any, userData: UserSelection) {
-    const allSelected = userData.mcVersion && userData.modLoader && userData.loaderVersion;
+    const allSelected =
+      userData.mcVersion && userData.modLoader && userData.loaderVersion && userData.launcherType;
 
     // Rebuild MC version select
-    const versions = await getMinecraftVersions();
+    const versions = await this.getCachedMinecraftVersions();
     const releaseVersions = versions
       .filter(v => v.type === 'release')
       .slice(0, 25)
@@ -166,6 +214,19 @@ export class TicketButtonHandler {
       }
     }
 
+    // Rebuild launcher type buttons
+    const typeAButton = new ButtonBuilder()
+      .setCustomId('launcher_type_a')
+      .setLabel('A 타입')
+      .setStyle(userData.launcherType === 'A' ? ButtonStyle.Success : ButtonStyle.Secondary);
+
+    const typeBButton = new ButtonBuilder()
+      .setCustomId('launcher_type_b')
+      .setLabel('B 타입')
+      .setStyle(userData.launcherType === 'B' ? ButtonStyle.Success : ButtonStyle.Secondary);
+
+    components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(typeAButton, typeBButton));
+
     // Add next button
     const nextButton = new ButtonBuilder()
       .setCustomId('ticket_next')
@@ -178,32 +239,45 @@ export class TicketButtonHandler {
     const statusText = `**의뢰 정보를 선택해주세요**\n\n` +
       `1️⃣ 마인크래프트 버전: ${userData.mcVersion || '선택 안됨'}\n` +
       `2️⃣ 모드로더: ${userData.modLoader || '선택 안됨'}\n` +
-      `3️⃣ 로더 버전: ${userData.loaderVersion || '선택 안됨'}`;
+      `3️⃣ 로더 버전: ${userData.loaderVersion || '선택 안됨'}\n` +
+      `4️⃣ 런처 타입: ${userData.launcherType ? `${userData.launcherType} 타입` : '선택 안됨'}`;
 
-    await interaction.update({
+    await interaction.editReply({
       content: statusText,
       components,
     });
   }
 
   private async getLoaderVersions(mcVersion: string, modLoader: string): Promise<string[]> {
+    const cacheKey = `${modLoader}_${mcVersion}`;
+    const cached = this.loaderVersionsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     try {
+      let data: string[];
       switch (modLoader) {
         case 'Forge': {
           const forgeVersions = await getForgeVersions(mcVersion);
-          return forgeVersions.map(v => v.version);
+          data = forgeVersions.map(v => v.version);
+          break;
         }
         case 'Fabric': {
           const fabricVersions = await getFabricVersions(mcVersion);
-          return fabricVersions.map(v => v.version);
+          data = fabricVersions.map(v => v.version);
+          break;
         }
         case 'NeoForge': {
           const neoforgeVersions = await getNeoForgeVersions(mcVersion);
-          return neoforgeVersions.map(v => v.version);
+          data = neoforgeVersions.map(v => v.version);
+          break;
         }
         default:
-          return [];
+          data = [];
       }
+      this.loaderVersionsCache.set(cacheKey, { data, expiresAt: Date.now() + VERSION_CACHE_TTL_MS });
+      return data;
     } catch {
       return [];
     }
@@ -213,7 +287,7 @@ export class TicketButtonHandler {
   async onTicketNext(@Context() [interaction]: ButtonContext) {
     const userData = this.ticketService.getUserSelection(interaction.user.id);
 
-    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion) {
+    if (!userData?.mcVersion || !userData?.modLoader || !userData?.loaderVersion || !userData?.launcherType) {
       return interaction.reply({
         content: '모든 항목을 선택해주세요.',
         flags: MessageFlags.Ephemeral,
