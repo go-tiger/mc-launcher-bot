@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 
 export enum TicketType {
@@ -50,4 +51,7 @@ export class Ticket {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }
