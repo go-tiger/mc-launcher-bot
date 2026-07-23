@@ -13,7 +13,7 @@ import {
   TextInputStyle,
 } from 'discord.js';
 import { TicketService } from '../ticket.service.js';
-import { CommissionStatus } from '../../core/entities/index.js';
+import { TicketStatus } from '../../core/entities/index.js';
 
 @Injectable()
 export class CommissionActionHandler {
@@ -22,7 +22,7 @@ export class CommissionActionHandler {
   @Button('commission_status')
   async onStatusButton(@Context() [interaction]: ButtonContext) {
     // Check if user has admin role
-    const config = await this.ticketService.getOrCreateGuildConfig(interaction.guildId!);
+    const settings = await this.ticketService.getOrCreateGuildSettings(interaction.guildId!);
     if (!interaction.member || !('roles' in interaction.member)) {
       return interaction.reply({
         content: '권한이 없습니다.',
@@ -32,8 +32,8 @@ export class CommissionActionHandler {
 
     const memberRoles = interaction.member.roles;
     const hasAdminRole = Array.isArray(memberRoles)
-      ? memberRoles.includes(config.adminRoleId)
-      : memberRoles.cache.has(config.adminRoleId);
+      ? memberRoles.includes(settings.adminRole)
+      : memberRoles.cache.has(settings.adminRole);
 
     if (!hasAdminRole) {
       return interaction.reply({
@@ -46,7 +46,7 @@ export class CommissionActionHandler {
       .setCustomId('select_commission_status')
       .setPlaceholder('새로운 상태 선택')
       .addOptions(
-        Object.values(CommissionStatus).map(status => ({
+        Object.values(TicketStatus).map(status => ({
           label: status,
           value: status,
         }))
@@ -63,20 +63,20 @@ export class CommissionActionHandler {
 
   @StringSelect('select_commission_status')
   async onSelectStatus(@Context() [interaction]: StringSelectContext) {
-    const newStatus = interaction.values[0] as CommissionStatus;
-    const commission = await this.ticketService.getCommissionByChannelId(interaction.channelId!);
+    const newStatus = interaction.values[0] as TicketStatus;
+    const ticket = await this.ticketService.getTicketByChannel(interaction.channelId!);
 
-    if (!commission) {
+    if (!ticket) {
       return interaction.reply({
         content: '의뢰 정보를 찾을 수 없습니다.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    await this.ticketService.updateCommissionStatus(commission.id, newStatus);
+    await this.ticketService.updateTicketStatus(ticket.id, newStatus);
 
     // Update the original embed
-    await this.updateCommissionEmbed(interaction, commission.id);
+    await this.updateTicketEmbed(interaction, ticket.id);
 
     // Ephemeral response to admin
     await interaction.reply({
@@ -87,16 +87,16 @@ export class CommissionActionHandler {
     // Public notification to requester
     if (interaction.channel && 'send' in interaction.channel) {
       await interaction.channel.send({
-        content: `<@${commission.requesterId}> 의뢰 상태가 **${newStatus}**(으)로 변경되었습니다.`,
+        content: `<@${ticket.requester}> 의뢰 상태가 **${newStatus}**(으)로 변경되었습니다.`,
       });
     }
 
     // Move to archive category if status is COMPLETED
-    if (newStatus === CommissionStatus.COMPLETED && interaction.guildId) {
-      const config = await this.ticketService.getOrCreateGuildConfig(interaction.guildId);
-      if (config.archiveCategoryId && interaction.channel && 'setParent' in interaction.channel) {
+    if (newStatus === TicketStatus.COMPLETED && interaction.guildId) {
+      const settings = await this.ticketService.getOrCreateGuildSettings(interaction.guildId);
+      if (settings.archive && interaction.channel && 'setParent' in interaction.channel) {
         // lockPermissions: false to keep existing permissions (requester can still chat)
-        await interaction.channel.setParent(config.archiveCategoryId, { lockPermissions: false }).catch(() => {});
+        await interaction.channel.setParent(settings.archive, { lockPermissions: false }).catch(() => {});
       }
     }
   }
@@ -104,7 +104,7 @@ export class CommissionActionHandler {
   @Button('commission_price')
   async onPriceButton(@Context() [interaction]: ButtonContext) {
     // Check if user has admin role
-    const config = await this.ticketService.getOrCreateGuildConfig(interaction.guildId!);
+    const settings = await this.ticketService.getOrCreateGuildSettings(interaction.guildId!);
     if (!interaction.member || !('roles' in interaction.member)) {
       return interaction.reply({
         content: '권한이 없습니다.',
@@ -114,8 +114,8 @@ export class CommissionActionHandler {
 
     const memberRoles = interaction.member.roles;
     const hasAdminRole = Array.isArray(memberRoles)
-      ? memberRoles.includes(config.adminRoleId)
-      : memberRoles.cache.has(config.adminRoleId);
+      ? memberRoles.includes(settings.adminRole)
+      : memberRoles.cache.has(settings.adminRole);
 
     if (!hasAdminRole) {
       return interaction.reply({
@@ -155,19 +155,19 @@ export class CommissionActionHandler {
       });
     }
 
-    const commission = await this.ticketService.getCommissionByChannelId(interaction.channelId!);
+    const ticket = await this.ticketService.getTicketByChannel(interaction.channelId!);
 
-    if (!commission) {
+    if (!ticket) {
       return interaction.reply({
         content: '의뢰 정보를 찾을 수 없습니다.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    await this.ticketService.updateCommissionPrice(commission.id, price);
+    await this.ticketService.updateTicketPrice(ticket.id, price);
 
     // Update the original embed
-    await this.updateCommissionEmbed(interaction, commission.id);
+    await this.updateTicketEmbed(interaction, ticket.id);
 
     // Ephemeral response to admin
     await interaction.reply({
@@ -178,7 +178,7 @@ export class CommissionActionHandler {
     // Public notification to requester
     if (interaction.channel && 'send' in interaction.channel) {
       await interaction.channel.send({
-        content: `<@${commission.requesterId}> 의뢰 가격이 **${price.toLocaleString()}원**으로 설정되었습니다.`,
+        content: `<@${ticket.requester}> 의뢰 가격이 **${price.toLocaleString()}원**으로 설정되었습니다.`,
       });
     }
   }
@@ -186,7 +186,7 @@ export class CommissionActionHandler {
   @Button('commission_close')
   async onCloseButton(@Context() [interaction]: ButtonContext) {
     // Check if user has admin role
-    const config = await this.ticketService.getOrCreateGuildConfig(interaction.guildId!);
+    const settings = await this.ticketService.getOrCreateGuildSettings(interaction.guildId!);
     if (!interaction.member || !('roles' in interaction.member)) {
       return interaction.reply({
         content: '권한이 없습니다.',
@@ -196,8 +196,8 @@ export class CommissionActionHandler {
 
     const memberRoles = interaction.member.roles;
     const hasAdminRole = Array.isArray(memberRoles)
-      ? memberRoles.includes(config.adminRoleId)
-      : memberRoles.cache.has(config.adminRoleId);
+      ? memberRoles.includes(settings.adminRole)
+      : memberRoles.cache.has(settings.adminRole);
 
     if (!hasAdminRole) {
       return interaction.reply({
@@ -226,10 +226,10 @@ export class CommissionActionHandler {
 
   @Button('commission_close_confirm')
   async onCloseConfirm(@Context() [interaction]: ButtonContext) {
-    const commission = await this.ticketService.getCommissionByChannelId(interaction.channelId!);
+    const ticket = await this.ticketService.getTicketByChannel(interaction.channelId!);
 
-    if (commission) {
-      await this.ticketService.updateCommissionStatus(commission.id, CommissionStatus.COMPLETED);
+    if (ticket) {
+      await this.ticketService.updateTicketStatus(ticket.id, TicketStatus.COMPLETED);
     }
 
     await interaction.reply({
@@ -255,9 +255,12 @@ export class CommissionActionHandler {
     });
   }
 
-  private async updateCommissionEmbed(interaction: any, commissionId: number) {
-    const commission = await this.ticketService.getCommissionById(commissionId);
-    if (!commission) return;
+  private async updateTicketEmbed(interaction: any, ticketId: number) {
+    const ticket = await this.ticketService.getTicketById(ticketId);
+    if (!ticket) return;
+
+    const launcher = await this.ticketService.getTicketLauncherByTicketId(ticketId);
+    if (!launcher) return;
 
     // Find and update the original message with the embed
     const channel = interaction.channel;
@@ -274,18 +277,18 @@ export class CommissionActionHandler {
       .setTitle('📋 의뢰 정보')
       .setColor(0x5865F2)
       .addFields(
-        { name: '의뢰자', value: `<@${commission.requesterId}>`, inline: true },
-        { name: '상태', value: commission.status, inline: true },
-        { name: '가격', value: commission.price ? `${commission.price.toLocaleString()}원` : '미정', inline: true },
-        { name: '런처 이름', value: commission.launcherName, inline: true },
-        { name: '폴더명', value: commission.folderName, inline: true },
-        { name: '마인크래프트 버전', value: commission.minecraftVersion, inline: true },
-        { name: '모드로더', value: `${commission.modLoader} ${commission.loaderVersion}`, inline: true },
+        { name: '의뢰자', value: `<@${ticket.requester}>`, inline: true },
+        { name: '상태', value: ticket.status, inline: true },
+        { name: '가격', value: ticket.price ? `${ticket.price.toLocaleString()}원` : '미정', inline: true },
+        { name: '런처 이름', value: launcher.launcherName, inline: true },
+        { name: '폴더명', value: launcher.folderName, inline: true },
+        { name: '마인크래프트 버전', value: launcher.minecraftVersion, inline: true },
+        { name: '모드로더', value: `${launcher.modLoader} ${launcher.loaderVersion}`, inline: true },
       )
       .setTimestamp();
 
-    if (commission.additionalNotes) {
-      embed.addFields({ name: '추가 요청사항', value: commission.additionalNotes });
+    if (ticket.note) {
+      embed.addFields({ name: '추가 요청사항', value: ticket.note });
     }
 
     await botMessage.edit({ embeds: [embed] });

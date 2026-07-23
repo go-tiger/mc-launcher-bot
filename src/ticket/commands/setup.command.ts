@@ -51,12 +51,11 @@ export class SetupCommand {
       });
     }
 
-    // Save guild config
-    await this.ticketService.updateGuildConfig(interaction.guild.id, {
-      adminRoleId: admin_role.id,
-      ticketCategoryId: ticket_category.id,
-      archiveCategoryId: archive_category.id,
-      ticketChannelId: interaction.channelId,
+    // Save guild settings
+    await this.ticketService.updateGuildSettings(interaction.guild.id, {
+      adminRole: admin_role.id,
+      ticket: ticket_category.id,
+      archive: archive_category.id,
     });
 
     // Create embed
@@ -86,11 +85,6 @@ export class SetupCommand {
     const message = await channel.send({
       embeds: [embed],
       components: [row],
-    });
-
-    // Save message ID
-    await this.ticketService.updateGuildConfig(interaction.guild.id, {
-      ticketMessageId: message.id,
     });
 
     return interaction.reply({

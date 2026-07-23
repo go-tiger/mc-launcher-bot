@@ -8,9 +8,9 @@ import {
 import { Ticket } from './ticket.entity.js';
 
 export enum ModLoader {
-  FORGE = 'FORGE',
-  FABRIC = 'FABRIC',
-  NEOFORGE = 'NEOFORGE',
+  FORGE = 'Forge',
+  FABRIC = 'Fabric',
+  NEOFORGE = 'NeoForge',
 }
 
 @Entity('ticket_launchers')

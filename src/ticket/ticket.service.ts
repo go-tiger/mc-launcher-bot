@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Commission, GuildConfig, ModLoader, CommissionStatus } from '../core/entities/index.js';
+import { DataSource, Repository } from 'typeorm';
+import {
+  Ticket,
+  TicketStatus,
+  TicketType,
+  TicketLauncher,
+  TicketLauncherModLoader,
+  GuildSettings,
+} from '../core/entities/index.js';
 
 export interface UserSelection {
   mcVersion?: string;
@@ -16,10 +23,11 @@ export class TicketService {
   private userSelections = new Map<string, UserSelection>();
 
   constructor(
-    @InjectRepository(Commission)
-    private commissionRepository: Repository<Commission>,
-    @InjectRepository(GuildConfig)
-    private guildConfigRepository: Repository<GuildConfig>,
+    @InjectRepository(Ticket)
+    private ticketRepository: Repository<Ticket>,
+    @InjectRepository(GuildSettings)
+    private guildSettingsRepository: Repository<GuildSettings>,
+    private dataSource: DataSource,
   ) {}
 
   // User selection methods
@@ -42,66 +50,90 @@ export class TicketService {
     this.userSelections.delete(userId);
   }
 
-  async getOrCreateGuildConfig(guildId: string): Promise<GuildConfig> {
-    let config = await this.guildConfigRepository.findOne({ where: { guildId } });
-    if (!config) {
-      config = this.guildConfigRepository.create({ guildId });
-      await this.guildConfigRepository.save(config);
+  async getOrCreateGuildSettings(guild: string): Promise<GuildSettings> {
+    let settings = await this.guildSettingsRepository.findOne({ where: { guild } });
+    if (!settings) {
+      settings = this.guildSettingsRepository.create({ guild });
+      await this.guildSettingsRepository.save(settings);
     }
-    return config;
+    return settings;
   }
 
-  async updateGuildConfig(guildId: string, data: Partial<GuildConfig>): Promise<GuildConfig> {
-    const config = await this.getOrCreateGuildConfig(guildId);
-    Object.assign(config, data);
-    return this.guildConfigRepository.save(config);
+  async updateGuildSettings(
+    guild: string,
+    data: Partial<GuildSettings>,
+  ): Promise<GuildSettings> {
+    const settings = await this.getOrCreateGuildSettings(guild);
+    Object.assign(settings, data);
+    return this.guildSettingsRepository.save(settings);
   }
 
-  async getNextTicketNumber(guildId: string): Promise<number> {
-    const config = await this.getOrCreateGuildConfig(guildId);
-    config.ticketCounter += 1;
-    await this.guildConfigRepository.save(config);
-    return config.ticketCounter;
-  }
-
-  async createCommission(data: {
-    guildId: string;
-    requesterId: string;
-    requesterTag: string;
-    ticketChannelId: string;
+  async createLauncherTicket(data: {
+    guild: string;
+    requester: string;
+    note?: string;
     launcherName: string;
     folderName: string;
     minecraftVersion: string;
-    modLoader: ModLoader;
+    modLoader: TicketLauncherModLoader;
     loaderVersion: string;
-    additionalNotes?: string;
-  }): Promise<Commission> {
-    const commission = this.commissionRepository.create({
-      ...data,
-      status: CommissionStatus.PENDING,
+    deadline: Date;
+  }): Promise<Ticket> {
+    return this.dataSource.transaction(async (manager) => {
+      const ticket = manager.create(Ticket, {
+        guild: data.guild,
+        requester: data.requester,
+        channel: '',
+        type: TicketType.LAUNCHER,
+        note: data.note,
+        status: TicketStatus.PENDING,
+      });
+      await manager.save(ticket);
+
+      const ticketLauncher = manager.create(TicketLauncher, {
+        id: ticket.id,
+        launcherName: data.launcherName,
+        folderName: data.folderName,
+        minecraftVersion: data.minecraftVersion,
+        modLoader: data.modLoader,
+        loaderVersion: data.loaderVersion,
+        deadline: data.deadline,
+      });
+      await manager.save(ticketLauncher);
+
+      return ticket;
     });
-    return this.commissionRepository.save(commission);
   }
 
-  async getCommissionByChannelId(channelId: string): Promise<Commission | null> {
-    return this.commissionRepository.findOne({ where: { ticketChannelId: channelId } });
+  async setTicketChannel(id: number, channel: string): Promise<void> {
+    await this.ticketRepository.update(id, { channel });
   }
 
-  async updateCommissionStatus(id: number, status: CommissionStatus): Promise<Commission | null> {
-    const commission = await this.commissionRepository.findOne({ where: { id } });
-    if (!commission) return null;
-    commission.status = status;
-    return this.commissionRepository.save(commission);
+  async getTicketByChannel(channel: string): Promise<Ticket | null> {
+    return this.ticketRepository.findOne({ where: { channel } });
   }
 
-  async updateCommissionPrice(id: number, price: number): Promise<Commission | null> {
-    const commission = await this.commissionRepository.findOne({ where: { id } });
-    if (!commission) return null;
-    commission.price = price;
-    return this.commissionRepository.save(commission);
+  async updateTicketStatus(id: number, status: TicketStatus): Promise<Ticket | null> {
+    const ticket = await this.ticketRepository.findOne({ where: { id } });
+    if (!ticket) return null;
+    ticket.status = status;
+    return this.ticketRepository.save(ticket);
   }
 
-  async getCommissionById(id: number): Promise<Commission | null> {
-    return this.commissionRepository.findOne({ where: { id } });
+  async updateTicketPrice(id: number, price: number): Promise<Ticket | null> {
+    const ticket = await this.ticketRepository.findOne({ where: { id } });
+    if (!ticket) return null;
+    ticket.price = price;
+    return this.ticketRepository.save(ticket);
+  }
+
+  async getTicketById(id: number): Promise<Ticket | null> {
+    return this.ticketRepository.findOne({ where: { id } });
+  }
+
+  async getTicketLauncherByTicketId(id: number): Promise<TicketLauncher | null> {
+    return this.dataSource
+      .getRepository(TicketLauncher)
+      .findOne({ where: { id } });
   }
 }

@@ -11,7 +11,9 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import { TicketService } from '../ticket.service.js';
-import { ModLoader, CommissionStatus } from '../../core/entities/index.js';
+import { TicketLauncherModLoader, TicketStatus } from '../../core/entities/index.js';
+
+const LAUNCHER_TICKET_DEADLINE_DAYS = 14;
 
 @Injectable()
 export class TicketModalHandler {
@@ -37,7 +39,7 @@ export class TicketModalHandler {
     }
 
     const mcVersion = userData.mcVersion;
-    const modLoader = userData.modLoader as ModLoader;
+    const modLoader = userData.modLoader as TicketLauncherModLoader;
     const loaderVersion = userData.loaderVersion;
     const interactionToken = userData.interactionToken;
     const applicationId = userData.applicationId;
@@ -56,25 +58,39 @@ export class TicketModalHandler {
         .catch(() => {});
     }
 
-    // Get guild config
-    const config = await this.ticketService.getOrCreateGuildConfig(interaction.guild.id);
+    // Get guild settings
+    const settings = await this.ticketService.getOrCreateGuildSettings(interaction.guild.id);
 
-    if (!config.ticketCategoryId || !config.adminRoleId) {
+    if (!settings.ticket || !settings.adminRole) {
       return interaction.reply({
         content: '티켓 시스템이 설정되지 않았습니다. 관리자에게 문의해주세요.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    // Get next ticket number
-    const ticketNumber = await this.ticketService.getNextTicketNumber(interaction.guild.id);
-    const ticketName = `ticket-${interaction.user.username}-${String(ticketNumber).padStart(3, '0')}`;
+    // Create ticket + launcher spec in the database first (id needed for channel naming)
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + LAUNCHER_TICKET_DEADLINE_DAYS);
+
+    const ticket = await this.ticketService.createLauncherTicket({
+      guild: interaction.guild.id,
+      requester: interaction.user.id,
+      note: additionalNotes || undefined,
+      launcherName,
+      folderName,
+      minecraftVersion: mcVersion,
+      modLoader,
+      loaderVersion,
+      deadline,
+    });
+
+    const ticketName = `ticket-${interaction.user.username}-${String(ticket.id).padStart(3, '0')}`;
 
     // Create ticket channel
     const ticketChannel = await interaction.guild.channels.create({
       name: ticketName,
       type: ChannelType.GuildText,
-      parent: config.ticketCategoryId,
+      parent: settings.ticket,
       permissionOverwrites: [
         {
           id: interaction.guild.id,
@@ -90,7 +106,7 @@ export class TicketModalHandler {
           ],
         },
         {
-          id: config.adminRoleId,
+          id: settings.adminRole,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -102,19 +118,7 @@ export class TicketModalHandler {
       ],
     });
 
-    // Save commission to database
-    await this.ticketService.createCommission({
-      guildId: interaction.guild.id,
-      requesterId: interaction.user.id,
-      requesterTag: interaction.user.tag,
-      ticketChannelId: ticketChannel.id,
-      launcherName,
-      folderName,
-      minecraftVersion: mcVersion,
-      modLoader,
-      loaderVersion,
-      additionalNotes: additionalNotes || undefined,
-    });
+    await this.ticketService.setTicketChannel(ticket.id, ticketChannel.id);
 
     // Create info embed
     const embed = new EmbedBuilder()
@@ -122,8 +126,8 @@ export class TicketModalHandler {
       .setColor(0x5865F2)
       .addFields(
         { name: '의뢰자', value: `<@${interaction.user.id}>`, inline: true },
-        { name: '상태', value: CommissionStatus.PENDING, inline: true },
-        { name: '\u200b', value: '\u200b', inline: true },
+        { name: '상태', value: TicketStatus.PENDING, inline: true },
+        { name: '​', value: '​', inline: true },
         { name: '런처 이름', value: launcherName, inline: true },
         { name: '폴더명', value: folderName, inline: true },
         { name: '마인크래프트 버전', value: mcVersion, inline: true },
@@ -156,7 +160,7 @@ export class TicketModalHandler {
 
     // Send welcome message in ticket channel
     await ticketChannel.send({
-      content: `<@${interaction.user.id}> <@&${config.adminRoleId}>`,
+      content: `<@${interaction.user.id}> <@&${settings.adminRole}>`,
       embeds: [embed],
       components: [actionRow],
     });
