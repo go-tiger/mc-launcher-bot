@@ -6,7 +6,7 @@ import {
   TicketStatus,
   TicketType,
   TicketLauncher,
-  TicketLauncherModLoader,
+  ModLoader,
   GuildSettings,
 } from '../core/entities/index.js';
 
@@ -75,7 +75,7 @@ export class TicketService {
     launcherName: string;
     folderName: string;
     minecraftVersion: string;
-    modLoader: TicketLauncherModLoader;
+    modLoader: ModLoader;
     loaderVersion: string;
     deadline: Date;
   }): Promise<Ticket> {

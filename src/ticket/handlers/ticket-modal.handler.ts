@@ -11,7 +11,7 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import { TicketService } from '../ticket.service.js';
-import { TicketLauncherModLoader, TicketStatus } from '../../core/entities/index.js';
+import { ModLoader, TicketStatus } from '../../core/entities/index.js';
 
 const DEADLINE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -39,7 +39,7 @@ export class TicketModalHandler {
     }
 
     const mcVersion = userData.mcVersion;
-    const modLoader = userData.modLoader as TicketLauncherModLoader;
+    const modLoader = userData.modLoader as ModLoader;
     const loaderVersion = userData.loaderVersion;
     const interactionToken = userData.interactionToken;
     const applicationId = userData.applicationId;
